@@ -1,18 +1,8 @@
-<!doctype html>
-<html lang="en-us">
-  <!-- Adapted for RenPyWeb from https://github.com/emscripten-core/emscripten/blob/master/src/shell.html -->
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Class of '09</title>
-    <script>
-      var DEFAULT_GAME_FILENAME = 'game.zip';
-    </script>
-    <style>
+@ -13,14 +13,16 @@
       body {
         font-family: arial;
         margin: 0;
+        padding: none;
         padding: 0;
         background-color: black;
         overflow: hidden;
@@ -20,68 +10,70 @@
 
       .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
       div.emscripten { text-align: center; }
-      
-      /* Canvas style */
+      div.emscripten_border { border: 1px solid black; }
+      /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
+      canvas.emscripten { border: 0px none; background-color: black; width: 100vw; height: 100vh; }
       canvas.emscripten { border: 0px none; background-color: black; width: 100vw; height: 100vh; display: block; }
 
-      /* Status Container overlaying the image */
+      #emscripten_logo {
+        display: inline-block;
+@ -66,10 +68,11 @@
+
       #statusbar_container {
         position: fixed;
-        top: 10%; /* Positioned near the top */
+        top: 0;
+        bottom: 20px; /* Moved to bottom to stay out of the way of the image */
         width: 100%;
-        z-index: 2000; /* Higher than presplash */
-        display: none;
+        margin: auto;
+        z-index: 100;
+        display: none; /* Hidden by default for a clean look */
       }
 
       #statusbar {
-        width: 60%;
-        margin: auto;
-        min-width: 300px;
-        padding: 15px;
-        background-color: rgba(0, 0, 0, 0.7);
-        border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+@ -78,24 +81,24 @@
+        min-width: 340px;
+        padding: 10px;
+        height: 40px;
+        background-color: rgb(40, 40, 40);
+        background-color: rgba(40, 40, 40, 0.8);
+        border-radius: 8px;
       }
 
       #status {
+        vertical-align: top;
         font-weight: bold;
-        color: #ffffff;
-        margin-bottom: 10px;
+        color: rgb(120, 120, 120);
+        color: rgb(200, 200, 200);
+        width: 100%;
+        padding-bottom: 2px;
+        text-align: left;
         text-align: center;
-        text-shadow: 1px 1px 2px black;
       }
 
       #progress {
-        height: 12px;
+        height: 20px;
+        height: 10px;
         width: 100%;
-        appearance: none;
       }
-      
-      #progress::-webkit-progress-bar { background-color: #333; border-radius: 6px; }
-      #progress::-webkit-progress-value { background-color: #007bff; border-radius: 6px; transition: width 0.3s; }
+
 
       #ContextContainer {
         position: absolute;
         left: 10px;
-        top: 10px;
-        color: white;
-        z-index: 2100;
+@ -105,7 +108,7 @@
       }
       #ContextButton {
         text-decoration: none;
-        color: rgba(255, 255, 255, 0.3);
+        color: grey;
+        color: rgba(128, 128, 128, 0.5);
         font-size: xx-large;
         cursor: pointer;
-      }
-      #ContextMenu {
+        user-select: none;
+@ -126,15 +129,38 @@
         background-color: rgb(40,40,40);
-        padding: 10px;
-        border-radius: 5px;
+        padding: 5px;
       }
-      #ContextMenu a { text-decoration: none; color: lightgrey; display: block; margin: 5px 0; }
 
-      /* Presplash Style */
       #presplash {
         position: fixed;
         top: 0;
@@ -103,280 +95,336 @@
   </head>
   <body>
 
-    <!-- Presplash Container -->
+    <!-- Presplash Container (Always on top initially) -->
     <div id="presplash">
         <img id="presplash_img" src="https://files.catbox.moe/88prnl.jpg" alt="Loading...">
     </div>
 
-    <!-- Status UI overlaying the presplash -->
     <div id="statusbar_container">
       <div id="statusbar">
-        <div id="status">Initializing...</div>
-        <progress value="0" max="100" id="progress" hidden=1></progress>
+        <div class="spinner" id='spinner'></div>
+        <div style="margin-left: 50px;">
+          <div class="emscripten" id="status">Downloading...</div>
+        <div class="spinner" id='spinner' style="display:none"></div>
+        <div>
+          <div class="emscripten" id="status"></div>
+          <progress value="0" max="100" id="progress" hidden=1></progress>
+        </div>
       </div>
-    </div>
-
+@ -143,16 +169,11 @@
     <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
 
-    <div id="ContextContainer">
-      <a id="ContextButton">&#8801;</a><br />
-      <div id="ContextMenu" style="display: none;">
-        <input id="ID_SavegamesImport" type="file" onchange="onSavegamesImport(this)" accept="application/zip" style=display:none></input>
+    <script>
+      // Subtly hint at lack of WebAssembly support (if applicable)
+      if (typeof WebAssembly !== 'object') {
+          var error_message = "Unsupported browser - please upgrade!\n(WebAssembly support needed)";
+          document.body = document.createElement('body');
+          document.body.innerHTML = error_message.replace('\n', '<br />');
+          location.href = 'javascript:alert("' + error_message.replace('\n', '\\n') + '")';
+          throw error_message;
+          window.stop();
+      }
+
+      document.getElementById('canvas').addEventListener('mouseenter', function(e) { window.focus() });
+      document.getElementById('canvas').addEventListener('click', function(e) { window.focus() });
+    </script>
+@ -164,23 +185,13 @@
         <a href="javascript:document.getElementById('ID_SavegamesImport').click();">Import saves</a><br />
         <a href="javascript:onSavegamesExport();">Export saves</a><br />
         <a href="javascript:FSDownload('/log.txt', 'text/plain');">Ren'Py log</a><br />
+        <a href="https://renpy.beuc.net/" target="_blank">
+          <span style="font-size: smaller">
+            <span style="color: dimgrey">Powered by</span>
+            RenPyWeb
+          </span>
+        </a>
       </div>
     </div>
 
     <script type='text/javascript'>
-      console.log("[System] Page loaded. Starting initialization...");
-
-      // Global FS pointer since Ren'Py often maps it to Module.FS
-      var getFS = function() {
-        return (typeof FS !== 'undefined') ? FS : (Module && Module.FS ? Module.FS : null);
-      };
-
+      /* Context menu */
       document.getElementById('ContextButton').addEventListener('click', function (e) {
         var menu = document.getElementById('ContextMenu');
+        if (menu.style.display == 'none')
+          menu.style.display = 'block';
+        else
+          menu.style.display = 'none';
         menu.style.display = (menu.style.display == 'none') ? 'block' : 'none';
         e.preventDefault();
       });
 
-      function onSavegamesImport(input) {
-        var fs = getFS();
-        if (!fs) return;
-        console.log("[FS] Importing savegames...");
-        reader = new FileReader();
-        reader.onload = function(e) {
-          fs.writeFile('savegames.zip', new Uint8Array(e.target.result));
+@ -190,22 +201,26 @@
+          FS.writeFile('savegames.zip', new Uint8Array(e.target.result));
           Module._emSavegamesImport();
-          fs.syncfs(false, function(err) {
-            if (err) console.error("[FS] Import error:", err);
-            else console.log("[FS] Import successful.");
+          FS.syncfs(false, function(err) {
+            if (err) {
+              console.trace(); console.log(err, err.message);
+              Module.print("Warning: cannot import savegames: write error: " + err.message + "\n");
+            } else {
+              Module.print("Saves imported - restart game to apply.\n");
+            }
+            if (err) console.error(err);
+            else Module.print("Saves imported.\n");
           });
         }
         reader.readAsArrayBuffer(input.files[0])
+        input.type = ''; input.type = 'file'; // reset field
       }
 
       function onSavegamesExport() {
-        console.log("[FS] Exporting savegames...");
+        ret = Module._emSavegamesExport();
+        if (ret) {
+          FSDownload('savegames.zip', 'application/zip');
         if (Module._emSavegamesExport()) FSDownload('savegames.zip', 'application/zip');
       }
 
+      // Ren'Py 7.4.0 uses presplashEnd to signal the interface is ready
       function presplashEnd() {
-        console.log("[Ren'Py] Game engine signaling end of presplash.");
         var presplash = document.getElementById('presplash');
-        var statusbar = document.getElementById('statusbar_container');
-        
-        // Hide status bar when presplash ends
-        if (statusbar) statusbar.style.display = 'none';
-
         if (presplash) {
-            presplash.style.transition = "opacity 0.8s ease";
+            presplash.style.transition = "opacity 0.5s ease";
             presplash.style.opacity = "0";
             setTimeout(function() {
-                if (presplash.parentNode) presplash.parentNode.removeChild(presplash);
-                console.log("[System] Presplash element removed.");
-            }, 800);
+                presplash.remove();
+            }, 500);
         }
       }
 
-      var extractionStarted = false;
-      function gameExtractAndRun() {
-        if (extractionStarted) return;
-        
-        if (typeof Module.ccall !== 'function') {
-            console.warn("[System] gameExtractAndRun called but WASM not ready. Retrying...");
-            setTimeout(gameExtractAndRun, 500);
+@ -222,181 +237,90 @@
+            return;
+        }
+        FS.unlink('/game.zip')
+        Module.print("Extracted in " + (Date.now()-start)/1000.0 + "s\n");
+
+        if (FS.readdir('/').indexOf('game') < 0) {
+            Module.setStatus("Invalid .zip (no top-level 'game' directory).");
             return;
         }
 
-        extractionStarted = true;
-        console.log("[Python] Starting ZIP extraction...");
-        Module.setStatus("Extracting game files...");
-        try {
-          var ret = Module.ccall('PyRun_SimpleString', 'number', ['string'], [
-            "import zipfile\n" +
-            "zip_ref = zipfile.ZipFile('game.zip', 'r')\n" +
-            "zip_ref.extractall('.')\n" +
-            "zip_ref.close()\n"
-          ]);
-          
-          if (ret != 0) {
-              console.error("[Python] Extraction failed with exit code:", ret);
-              Module.setStatus("Extraction error.");
-              return;
-          }
-          console.log("[Python] Extraction complete.");
-          var fs = getFS();
-          if (fs) fs.unlink('/game.zip');
-          
-          window.setTimeout(function() {
-            console.log("[Ren'Py] Calling pyapp_runmain...");
-            Module.setStatus("Starting engine...");
-            Module.ccall('pyapp_runmain', '', [], [], {async: true});
-          }, 100);
-        } catch (e) {
-          console.error("[System] Exception during extraction:", e);
-          Module.setStatus("Crash during extraction.");
-          extractionStarted = false;
-        }
+        // Create presplash container
+        div = document.createElement('div');
+        div.id = 'presplash';
+        div.style = 'position: absolute; width: 100%; height: 100%; top: 0; left: 0; background: black;';
+        c = document.getElementById('canvas');
+        c.parentElement.prepend(div);
+
+        // --- PRESPLASH IMAGE LOGIC ---
+        // Change the URL below to whatever image you want to show during loading
+        var presplashUrl = "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/classof09/web-presplash.jpg"; 
+        
+        var img = document.createElement('img');
+        img.src = presplashUrl;
+        img.style = 'display: block; margin: auto; width: 100%; height: 100%; object-fit: contain';
+        
+        // Fallback check: If the URL fails, try to see if it's inside the zip
+        // Check for local presplash file if remote fails
+        var img = document.getElementById('presplash_img');
+        img.onerror = function() {
+           Module.print("Presplash URL failed, checking local files...\n");
+           let localFile;
+           if (FS.readdir('/').indexOf('web-presplash.jpg') >= 0) localFile = FS.readFile('/web-presplash.jpg');
+           else if (FS.readdir('/').indexOf('web-presplash.png') >= 0) localFile = FS.readFile('/web-presplash.png');
+           
+           if (localFile) {
+             img.src = window.URL.createObjectURL(new Blob([localFile]));
+           }
+           if (localFile) img.src = window.URL.createObjectURL(new Blob([localFile]));
+        };
+
+        div.appendChild(img);
+        Module.print("Loading game, please wait...\n");
+
+        window.setTimeout(function() {
+          Module.ccall('pyapp_runmain', '', [], [], {async: true})
+        }, 200);
+      }
+
+      function presplashEnd() {
+        if (document.getElementById('presplash')) document.getElementById('presplash').remove();
+        }, 100);
       }
       
       function FSDownload(filename, mimetype) {
-        var fs = getFS();
-        if (!fs) return;
+        console.log('download', filename);
         var a = document.createElement('a');
         a.download = filename.replace(/.*\//, '');
         try {
-          a.href = window.URL.createObjectURL(new Blob([fs.readFile(filename)], { type: mimetype || '' }));
+          a.href = window.URL.createObjectURL(new Blob([FS.readFile(filename)],
+                                                       { type: mimetype || '' }));
+        } catch(e) {
+          Module.print("Error opening " + filename + "\n");
+          return;
+        }
+          a.href = window.URL.createObjectURL(new Blob([FS.readFile(filename)], { type: mimetype || '' }));
         } catch(e) { return; }
         document.body.appendChild(a);
         a.click();
+        setTimeout(function() {
+            window.URL.revokeObjectURL(a.href);
+            document.body.removeChild(a);
+        }, 1000);
         document.body.removeChild(a);
       }
     </script>
-
     <script type='text/javascript'>
       var statusElement = document.getElementById('status');
       var progressElement = document.getElementById('progress');
+      var spinnerElement = document.getElementById('spinner');
       var statusbarContainer = document.getElementById('statusbar_container');
 
       var Module = {
         preRun: [],
         postRun: [],
-        print: function(text) { console.log("[Standard Out]", text); },
-        printErr: function(text) { console.warn("[Standard Error]", text); },
-        canvas: document.getElementById('canvas'),
-        // Locate index.wasm on jsDelivr instead of the root of the hosting provider
-        locateFile: function(path, prefix) {
-          if (path.endsWith(".wasm")) return "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/classof09/index.wasm";
-          return prefix + path;
+        print: (function() {
+          var element = document.getElementById('status');
+          return function(text) {
+            if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+            console.log(text);
+            text = String(text);
+            text = text.replace(/&/g, "&amp;");
+            text = text.replace(/</g, "&lt;");
+            text = text.replace(/>/g, "&gt;");
+            text = text.replace('\n', '<br />', 'g');
+            element.innerHTML += text;
+
+            statusbar = document.getElementById('statusbar');
+            statusbar.hidden = false;
+            var print_date = new Date();
+            statusbar.date = print_date;
+            window.setTimeout(function() {
+              if (Module.setStatus.last && Module.setStatus.last.text == ''
+                  && statusbar.date == print_date) {
+                element.innerHTML = ''; statusbar.hidden = true;
+              }
+            }, 3000);
+          };
+        })(),
+        printErr: function(text) {
+          if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+          console.error(text);
         },
+        canvas: (function() {
+          var canvas = document.getElementById('canvas');
+          canvas.addEventListener("webglcontextlost", function(e) { alert('WebGL context lost. You will need to reload the page.'); e.preventDefault(); }, false);
+          return canvas;
+        })(),
+        print: function(text) { console.log(text); },
+        printErr: function(text) { console.error(text); },
+        canvas: document.getElementById('canvas'),
         setStatus: function(text) {
+          if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
+          if (text === Module.setStatus.last.text) return;
           if (!text) {
               statusbarContainer.style.display = 'none';
               return;
           }
-          console.log("[Status Updates]", text);
+          // Only show status bar if there's an actual message
           statusbarContainer.style.display = 'block';
           statusElement.innerHTML = text;
           var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+          var now = Date.now();
+          if (m && now - Module.setStatus.last.time < 30) return;
+          Module.setStatus.last.time = now;
+          Module.setStatus.last.text = text;
           if (m) {
+            text = m[1];
             progressElement.value = parseInt(m[2])*100;
             progressElement.max = parseInt(m[4])*100;
             progressElement.hidden = false;
+            spinnerElement.hidden = false;
           } else {
+            progressElement.value = null;
+            progressElement.max = null;
             progressElement.hidden = true;
+            if (!text) spinnerElement.style.display = 'none';
           }
-        },
-        monitorRunDependencies: function(left) {
-          if (left > 0) {
-            console.log("[WASM] Loading dependencies:", left, "remaining.");
-            Module.setStatus('Preparing assets (' + left + ' left)...');
+          if (text == '') {
+            statusElement.innerHTML = '';
+            document.getElementById('statusbar').hidden = true;
           } else {
-            Module.setStatus('');
+            statusElement.innerHTML = text + '<br />';
+            document.getElementById('statusbar').hidden = false;
           }
         },
-        onRuntimeInitialized: function() {
-            console.log("[WASM] Runtime fully initialized.");
-            var fs = getFS();
-            if (fs && fs.analyzePath('game.zip').exists) {
-                gameExtractAndRun();
-            }
+        totalDependencies: 0,
+        monitorRunDependencies: function(left) {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+          Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+          Module.setStatus(left ? 'Preparing assets...' : '');
         }
       };
 
-      var assetBuffer = null;
-
+      // --- ASSET STITCHING LOGIC ---
       (async function stitchAssets() {
         const baseUrl = "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/classof09/gamezip/game.part";
+        const totalParts = 4; // Parts 0, 1, 2, 3
         const totalParts = 4;
         const chunks = [];
         
-        console.log("[Network] Starting asset download sequence.");
+        Module.setStatus("Initializing downloader...");
+        
         try {
           for (let i = 0; i < totalParts; i++) {
-            const partUrl = `${baseUrl}${i}.zip`;
-            console.log("[Network] Fetching part", i, "from:", partUrl);
+            Module.setStatus(`Downloading assets: Part ${i + 1}/${totalParts}...`);
             Module.setStatus(`Downloading Part ${i + 1}/${totalParts}...`);
-            const response = await fetch(partUrl);
+            const response = await fetch(`${baseUrl}${i}.zip`);
+            if (!response.ok) throw new Error(`Part ${i} missing from server.`);
+            const blob = await response.blob();
+            chunks.push(blob);
             if (!response.ok) throw new Error(`Part ${i} missing.`);
             chunks.push(await response.blob());
           }
 
-          console.log("[Network] Stitching blobs...");
+          Module.setStatus("Reconstructing game file...");
           const fullBlob = new Blob(chunks, { type: "application/zip" });
-          assetBuffer = new Uint8Array(await fullBlob.arrayBuffer());
+          const arrayBuffer = await fullBlob.arrayBuffer();
           
-          console.log("[FS] Initiating FS check...");
-          var attempts = 0;
+          // Wait for FS to be ready if necessary
           const checkFS = setInterval(() => {
-            var fs = getFS();
-            attempts++;
-            // If FS is found OR we've waited too long, start the engine scripts
-            if (fs || attempts > 50) {
+            if (typeof FS !== 'undefined') {
               clearInterval(checkFS);
-              console.log(fs ? "[FS] Filesystem located." : "[FS] Check timed out, assuming engine handles FS.");
-              if (fs && assetBuffer) {
-                 fs.writeFile('game.zip', assetBuffer);
-                 console.log("[FS] game.zip written.");
-              }
+              FS.writeFile('game.zip', new Uint8Array(arrayBuffer));
+              Module.setStatus("Ready to launch.");
               startEngine();
             }
-          }, 200);
+          }, 100);
+
         } catch (e) {
-          console.error("[Network] Asset stitch failed:", e);
+          Module.setStatus("Error: " + e.message);
+          console.error(e);
           Module.setStatus("Download Error: " + e.message);
         }
       })();
 
-      function startEngine() {
-        console.log("[System] Injecting Ren'Py runtime scripts from CDN...");
-        const cdnBase = "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/classof09/";
-        const scripts = ["pythonhome-data.js", "pyapp-data.js", "zee.js", "index.js"];
-        let loadedCount = 0;
-        scripts.forEach(src => {
-          const s = document.createElement('script');
-          s.src = cdnBase + src; // Pulling core engine scripts from CDN
-          s.onload = () => {
-            loadedCount++;
-            console.log("[System] Script loaded:", src);
-            if (loadedCount === scripts.length) {
-              console.log("[System] All scripts injected.");
-              // After index.js loads, we check if we need to write the file again (safety)
-              var fs = getFS();
-              if (fs && assetBuffer && !fs.analyzePath('game.zip').exists) {
-                  fs.writeFile('game.zip', assetBuffer);
-              }
-              setTimeout(gameExtractAndRun, 800);
-            }
-          };
+@ -409,27 +333,17 @@
           document.body.appendChild(s);
         });
       }
+
+      window.onerror = function(event) {
+        Module.setStatus('Error: ' + event.split('\n')[0]);
+        spinnerElement.style.display = 'none';
+      };
     </script>
     <script type='text/javascript'>
       function create_persistent() {
-        var fs = getFS();
-        if (!fs) return;
-        console.log("[FS] Setting up persistence...");
         try {
-          if (!fs.analyzePath('/home/web_user/.renpy').exists) {
-            fs.mkdir('/home/web_user');
-            fs.mkdir('/home/web_user/.renpy');
-          }
-          fs.mount(IDBFS, {}, '/home/web_user/.renpy');
-          fs.syncfs(true, function(err) {
-            if (!err) console.log("[FS] Persistence synced.");
-          });
+          FS.mkdir('/home/web_user/.renpy');
+          FS.mount(IDBFS, {}, '/home/web_user/.renpy');
+        } catch(e) {
+          console.log(e);
+        }
+        FS.syncfs(true, function(err) {
+          if (err) console.log(err);
+        });
+          FS.syncfs(true, function(err) {});
         } catch(e) {}
       }
+      if (Module['calledRun']) {
+        create_persistent();
+      } else {
       if (Module['calledRun']) create_persistent();
       else {
         if (!Module['preRun']) Module['preRun'] = [];
         Module["preRun"].push(create_persistent);
       }
-    </script>
-  </body>
-</html>
