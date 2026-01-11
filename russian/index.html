@@ -230,7 +230,7 @@
 
       try {
         for (let i = 0; i < totalParts; i++) {
-          statusText.innerText = `Downloading game assets in chunks (Part ${i + 1} of ${totalParts})...`;
+          statusText.innerText = `[PORTED BY WALMARTGANG, sites.google.com/view/classroomtuffsigma] Downloading game assets in chunks (Part ${i + 1} of ${totalParts})...`;
           const response = await fetch(`${baseUrl}${i}.zip`);
           if (!response.ok) throw new Error(`Chunk ${i} failed to load. Ensure you have uploaded all parts.`);
           const blob = await response.blob();
@@ -238,11 +238,11 @@
           statusProgress.value = ((i + 1) / totalParts) * 100;
         }
 
-        statusText.innerText = "Stitching assets together...";
+        statusText.innerText = "[PORTED BY WALMARTGANG, sites.google.com/view/classroomtuffsigma] Stitching assets together...";
         const fullBlob = new Blob(chunks, { type: "application/zip" });
         window.gameZipURL = URL.createObjectURL(fullBlob);
         
-        statusText.innerText = "Starting engine...";
+        statusText.innerText = "[PORTED BY WALMARTGANG, sites.google.com/view/classroomtuffsigma] Starting engine...";
         // Proceed with engine load
         loadEngine();
       } catch (e) {
