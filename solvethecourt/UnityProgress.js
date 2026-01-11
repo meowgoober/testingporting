@@ -4,7 +4,8 @@ function UnityProgress (dom) {
 	this.dom = dom;
 
 	var parent = dom.parentNode;
-	// The base URL for your jsDelivr images
+	
+	// Base URL for your assets on jsDelivr
 	var assetBase = "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/solvethecourt/";
 
 	var background = document.createElement("div");
@@ -14,18 +15,21 @@ function UnityProgress (dom) {
 	this.background = background;
 
 	var logoImage = document.createElement("img");
+	// FIXED: Updated to jsDelivr URL
 	logoImage.src = assetBase + "progresslogo.png"; 
 	logoImage.style.position = "absolute";
 	parent.appendChild(logoImage);
 	this.logoImage = logoImage;
 
 	var progressFrame = document.createElement("img");
+	// FIXED: Updated to jsDelivr URL
 	progressFrame.src = assetBase + "loadingbar.png"; 
 	progressFrame.style.position = "absolute";
 	parent.appendChild(progressFrame);
 	this.progressFrame = progressFrame;
 
 	var progressBar = document.createElement("img");
+	// FIXED: Updated to jsDelivr URL
 	progressBar.src = assetBase + "fullbar.png"; 
 	progressBar.style.position = "absolute";
 	parent.appendChild(progressBar);
