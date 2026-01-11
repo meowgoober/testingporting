@@ -248,6 +248,11 @@
         print: function(text) { console.log("[Standard Out]", text); },
         printErr: function(text) { console.warn("[Standard Error]", text); },
         canvas: document.getElementById('canvas'),
+        // Locate index.wasm on jsDelivr instead of the root of the hosting provider
+        locateFile: function(path, prefix) {
+          if (path.endsWith(".wasm")) return "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/classof09/index.wasm";
+          return prefix + path;
+        },
         setStatus: function(text) {
           if (!text) {
               statusbarContainer.style.display = 'none';
@@ -327,12 +332,13 @@
       })();
 
       function startEngine() {
-        console.log("[System] Injecting Ren'Py runtime scripts...");
+        console.log("[System] Injecting Ren'Py runtime scripts from CDN...");
+        const cdnBase = "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/classof09/";
         const scripts = ["pythonhome-data.js", "pyapp-data.js", "zee.js", "index.js"];
         let loadedCount = 0;
         scripts.forEach(src => {
           const s = document.createElement('script');
-          s.src = src;
+          s.src = cdnBase + src; // Pulling core engine scripts from CDN
           s.onload = () => {
             loadedCount++;
             console.log("[System] Script loaded:", src);
