@@ -230,7 +230,7 @@
 
       try {
         for (let i = 0; i < totalParts; i++) {
-          statusText.innerText = `Downloading game assets (Part ${i + 1} of ${totalParts})...`;
+          statusText.innerText = `Downloading game assets in chunks (Part ${i + 1} of ${totalParts})...`;
           const response = await fetch(`${baseUrl}${i}.zip`);
           if (!response.ok) throw new Error(`Chunk ${i} failed to load. Ensure you have uploaded all parts.`);
           const blob = await response.blob();
