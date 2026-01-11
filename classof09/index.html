@@ -248,19 +248,6 @@
         print: function(text) { console.log("[Standard Out]", text); },
         printErr: function(text) { console.warn("[Standard Error]", text); },
         canvas: document.getElementById('canvas'),
-        // Explicitly pull WASM and GZ assets from jsDelivr
-        locateFile: function(path, prefix) {
-          const cdnBase = "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/classof09/";
-          if (path.endsWith(".wasm")) {
-              console.log("[WASM] Redirecting .wasm request to CDN:", cdnBase + "index.wasm");
-              return cdnBase + "index.wasm";
-          }
-          if (path.endsWith(".wasm.gz")) {
-              console.log("[WASM] Redirecting .wasm.gz request to CDN:", cdnBase + "index.wasm.gz");
-              return cdnBase + "index.wasm.gz";
-          }
-          return prefix + path;
-        },
         setStatus: function(text) {
           if (!text) {
               statusbarContainer.style.display = 'none';
@@ -340,13 +327,12 @@
       })();
 
       function startEngine() {
-        console.log("[System] Injecting Ren'Py runtime scripts from CDN...");
-        const cdnBase = "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/classof09/";
+        console.log("[System] Injecting Ren'Py runtime scripts...");
         const scripts = ["pythonhome-data.js", "pyapp-data.js", "zee.js", "index.js"];
         let loadedCount = 0;
         scripts.forEach(src => {
           const s = document.createElement('script');
-          s.src = cdnBase + src; // Pulling core engine scripts from CDN
+          s.src = src;
           s.onload = () => {
             loadedCount++;
             console.log("[System] Script loaded:", src);
