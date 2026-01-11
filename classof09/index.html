@@ -69,6 +69,7 @@
         top: 0;
         width: 100%;
         margin: auto;
+        z-index: 100;
       }
 
       #statusbar {
@@ -100,6 +101,7 @@
         left: 10px;
         top: 10px;
         color: white;
+        z-index: 101;
       }
       #ContextButton {
         text-decoration: none;
@@ -117,7 +119,7 @@
         color: lightgrey;
       }
       #ContextMenu a:hover {
-        text-decoration: nsone;
+        text-decoration: none;
         color: grey;
       }
       #ContextMenu {
@@ -149,11 +151,8 @@
           location.href = 'javascript:alert("' + error_message.replace('\n', '\\n') + '")';
           throw error_message;
           window.stop();
-          // R.I.P.
       }
 
-      // Work-around iframe focus
-      // https://github.com/emscripten-core/emscripten/pull/7631
       document.getElementById('canvas').addEventListener('mouseenter', function(e) { window.focus() });
       document.getElementById('canvas').addEventListener('click', function(e) { window.focus() });
     </script>
@@ -171,13 +170,10 @@
             RenPyWeb
           </span>
         </a>
-        </span>
       </div>
     </div>
 
     <script type='text/javascript'>
-      /* Copyright (C) 2018, 2019  Sylvain Beucler */
-
       /* Context menu */
       document.getElementById('ContextButton').addEventListener('click', function (e) {
         var menu = document.getElementById('ContextMenu');
@@ -203,7 +199,7 @@
           });
         }
         reader.readAsArrayBuffer(input.files[0])
-	input.type = ''; input.type = 'file'; // reset field
+        input.type = ''; input.type = 'file'; // reset field
       }
 
       function onSavegamesExport() {
@@ -233,44 +229,45 @@
             return;
         }
 
-        // presplash
-        presplash = undefined;
-        if (FS.readdir('/').indexOf('web-presplash.png') >= 0) {
-          presplash = FS.readFile('/web-presplash.png');
-        } else if (FS.readdir('/').indexOf('web-presplash.jpg') >= 0) {
-          presplash = FS.readFile('/web-presplash.jpg');
-        } else if (FS.readdir('/').indexOf('web-presplash.webp') >= 0) {
-          presplash = FS.readFile('/web-presplash.webp');
-        } else if (FS.readdir('/').indexOf('web-presplash-default.jpg') >= 0) {
-          presplash = FS.readFile('/web-presplash-default.jpg');
-        }
-
+        // Create presplash container
         div = document.createElement('div');
-        div.id = 'presplash';  // used by presplashEnd()
-        div.style = 'position: absolute; width: 100%; height: 100%';
+        div.id = 'presplash';
+        div.style = 'position: absolute; width: 100%; height: 100%; top: 0; left: 0; background: black;';
         c = document.getElementById('canvas');
         c.parentElement.prepend(div);
 
-        if (presplash) {
-          obj_url = window.URL.createObjectURL(new Blob([presplash]));
-          img = document.createElement('img');
-          img.src = obj_url;
-          img.style = 'display: block; margin: auto; width: 100%; height: 100%; object-fit: contain';
-          div.appendChild(img)
-        } else {
-          Module.print("Loading game, please wait...\n");
-        }
+        // --- PRESPLASH IMAGE LOGIC ---
+        // Change the URL below to whatever image you want to show during loading
+        var presplashUrl = "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/classof09/web-presplash.jpg"; 
+        
+        var img = document.createElement('img');
+        img.src = presplashUrl;
+        img.style = 'display: block; margin: auto; width: 100%; height: 100%; object-fit: contain';
+        
+        // Fallback check: If the URL fails, try to see if it's inside the zip
+        img.onerror = function() {
+           Module.print("Presplash URL failed, checking local files...\n");
+           let localFile;
+           if (FS.readdir('/').indexOf('web-presplash.jpg') >= 0) localFile = FS.readFile('/web-presplash.jpg');
+           else if (FS.readdir('/').indexOf('web-presplash.png') >= 0) localFile = FS.readFile('/web-presplash.png');
+           
+           if (localFile) {
+             img.src = window.URL.createObjectURL(new Blob([localFile]));
+           }
+        };
 
-        // give control back to webui before running main
+        div.appendChild(img);
+        Module.print("Loading game, please wait...\n");
+
         window.setTimeout(function() {
           Module.ccall('pyapp_runmain', '', [], [], {async: true})
-        }, 200);  // smaller delay doesn't update the DOM, esp. on mobile
+        }, 200);
       }
 
-      // hook for Ren'Py
       function presplashEnd() {
-        document.getElementById('presplash').remove();
+        if (document.getElementById('presplash')) document.getElementById('presplash').remove();
       }
+      
       function FSDownload(filename, mimetype) {
         console.log('download', filename);
         var a = document.createElement('a');
@@ -284,8 +281,6 @@
         }
         document.body.appendChild(a);
         a.click();
-        // delay clean-up to avoid iOS issue:
-        // The operation couldn’t be completed. (WebKitBlobResourse error 1.)
         setTimeout(function() {
             window.URL.revokeObjectURL(a.href);
             document.body.removeChild(a);
@@ -305,7 +300,6 @@
           return function(text) {
             if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
             console.log(text);
-            // These replacements are necessary if you render to raw HTML
             text = String(text);
             text = text.replace(/&/g, "&amp;");
             text = text.replace(/</g, "&lt;");
@@ -318,7 +312,6 @@
             var print_date = new Date();
             statusbar.date = print_date;
             window.setTimeout(function() {
-              // Hide status bar after a few seconds - only if setStatus isn't active
               if (Module.setStatus.last && Module.setStatus.last.text == ''
                   && statusbar.date == print_date) {
                 element.innerHTML = ''; statusbar.hidden = true;
@@ -328,20 +321,11 @@
         })(),
         printErr: function(text) {
           if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
-          if (0) { // XXX disabled for safety typeof dump == 'function') {
-            dump(text + '\n'); // fast, straight to the real console
-          } else {
-            console.error(text);
-          }
+          console.error(text);
         },
         canvas: (function() {
           var canvas = document.getElementById('canvas');
-
-          // As a default initial behavior, pop up an alert when webgl context is lost. To make your
-          // application robust, you may want to override this behavior before shipping!
-          // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
           canvas.addEventListener("webglcontextlost", function(e) { alert('WebGL context lost. You will need to reload the page.'); e.preventDefault(); }, false);
-
           return canvas;
         })(),
         setStatus: function(text) {
@@ -349,7 +333,7 @@
           if (text === Module.setStatus.last.text) return;
           var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
           var now = Date.now();
-          if (m && now - Module.setStatus.last.time < 30) return; // if this is a progress update, skip it if too soon
+          if (m && now - Module.setStatus.last.time < 30) return;
           Module.setStatus.last.time = now;
           Module.setStatus.last.text = text;
           if (m) {
@@ -378,48 +362,77 @@
           Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
         }
       };
-      Module.setStatus('Downloading...');
+
+      // --- ASSET STITCHING LOGIC ---
+      (async function stitchAssets() {
+        const baseUrl = "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/classof09/gamezip/game.part";
+        const totalParts = 4; // Parts 0, 1, 2, 3
+        const chunks = [];
+        
+        Module.setStatus("Initializing downloader...");
+        
+        try {
+          for (let i = 0; i < totalParts; i++) {
+            Module.setStatus(`Downloading assets: Part ${i + 1}/${totalParts}...`);
+            const response = await fetch(`${baseUrl}${i}.zip`);
+            if (!response.ok) throw new Error(`Part ${i} missing from server.`);
+            const blob = await response.blob();
+            chunks.push(blob);
+          }
+
+          Module.setStatus("Reconstructing game file...");
+          const fullBlob = new Blob(chunks, { type: "application/zip" });
+          const arrayBuffer = await fullBlob.arrayBuffer();
+          
+          // Wait for FS to be ready if necessary
+          const checkFS = setInterval(() => {
+            if (typeof FS !== 'undefined') {
+              clearInterval(checkFS);
+              FS.writeFile('game.zip', new Uint8Array(arrayBuffer));
+              Module.setStatus("Ready to launch.");
+              startEngine();
+            }
+          }, 100);
+
+        } catch (e) {
+          Module.setStatus("Error: " + e.message);
+          console.error(e);
+        }
+      })();
+
+      function startEngine() {
+        const scripts = ["pythonhome-data.js", "pyapp-data.js", "zee.js", "index.js"];
+        scripts.forEach(src => {
+          const s = document.createElement('script');
+          s.src = src;
+          s.async = (src === "index.js");
+          document.body.appendChild(s);
+        });
+      }
+
       window.onerror = function(event) {
-        // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
-        //Module.setStatus('Exception thrown, see JavaScript console');
-        // Explicitly display meaningful errors such as "uncaught exception: out of memory":
-        Module.setStatus('Error: ' + event.split('\n')[0] + ' (see JavaScript console for details)');
+        Module.setStatus('Error: ' + event.split('\n')[0]);
         spinnerElement.style.display = 'none';
-        Module.setStatus = function(text) {
-          if (text) Module.printErr('[post-exception status] ' + text);
-        };
       };
     </script>
-    <script type='text/javascript' src="pythonhome-data.js"></script>
-    <script type='text/javascript' src="pyapp-data.js"></script>
     <script type='text/javascript'>
       function create_persistent() {
-        // populate savegames
         try {
           FS.mkdir('/home/web_user/.renpy');
           FS.mount(IDBFS, {}, '/home/web_user/.renpy');
         } catch(e) {
           console.log(e);
-          Module.print("Could not create ~/.renpy/ : " + e.message + "\n");
         }
         FS.syncfs(true, function(err) {
-          if (err) {
-              console.trace(); console.log(err, err.message);
-              // Note: not visible enough, quickly replaced by loading status
-              Module.print("Warning: cannot save games\n");
-          }
+          if (err) console.log(err);
         });
       }
       if (Module['calledRun']) {
         create_persistent();
       } else {
         if (!Module['preRun']) Module['preRun'] = [];
-        Module["preRun"].push(create_persistent); // FS is not initialized yet, wait for it
+        Module["preRun"].push(create_persistent);
       }
     </script>
-    <script type="text/javascript" src="zee.js"></script>
-    <script async type="text/javascript" src="index.js"></script>
   </body>
 </html>
-
-
