@@ -18,18 +18,52 @@
       <div class="title">Sort the Court!</div>
     </div>
     <p class="footer">&laquo; created with <a href="http://unity3d.com/" title="Go to unity3d.com">Unity</a> &raquo;</p>
-    <script type='text/javascript'>
-  var Module = {
-    TOTAL_MEMORY: 268435456,
-    errorhandler: null,			// arguments: err, url, line. This function must return 'true' if the error is handled, otherwise 'false'
-    compatibilitycheck: null,
-    dataUrl: "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/solvethecourt/WebGL.data",
-    codeUrl: "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/solvethecourt/WebGL.js",
-    memUrl: "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/solvethecourt/WebGL.mem",
-  };
-</script>
-<script src="https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/solvethecourt/UnityLoader.js"></script>
 
+    <script type='text/javascript'>
+      // This helper function fetches your small .part0 files to stay under the 50MB limit
+      async function getFileBlob(url, partCount) {
+        const parts = [];
+        for (let i = 0; i < partCount; i++) {
+          const response = await fetch(`${url}.part${i}`);
+          if (!response.ok) throw new Error("Could not reach jsDelivr for: " + url);
+          parts.push(await response.arrayBuffer());
+        }
+        // Combines parts into a virtual file URL that Unity can read
+        return URL.createObjectURL(new Blob(parts, { type: "application/octet-stream" }));
+      }
+
+      var Module = {
+        TOTAL_MEMORY: 268435456,
+        errorhandler: null,
+        compatibilitycheck: null,
+        dataUrl: "",
+        codeUrl: "",
+        memUrl: ""
+      };
+
+      (async () => {
+        const baseUrl = "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/solvethecourt/";
+        try {
+          // Reassemble files from your .part0 files seen in your folder
+          const [data, code, mem] = await Promise.all([
+            getFileBlob(baseUrl + "WebGL.datagz", 1),
+            getFileBlob(baseUrl + "WebGL.jsgz", 1),
+            getFileBlob(baseUrl + "WebGL.memgz", 1)
+          ]);
+
+          Module.dataUrl = data;
+          Module.codeUrl = code;
+          Module.memUrl = mem;
+
+          // Dynamically load the UnityLoader only after the data blobs are ready
+          var script = document.createElement('script');
+          script.src = baseUrl + "UnityLoader.js";
+          document.body.appendChild(script);
+        } catch (e) {
+          console.error("Unity Loading Error: ", e);
+        }
+      })();
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/solvethecourt/htmlgame.js" type="text/javascript"></script>
   </body>
 </html>
-<script defer src="https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/solvethecourt/htmlgame.js" type="text/javascript"></script>
