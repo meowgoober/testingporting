@@ -19,15 +19,16 @@
     </div>
     <p class="footer">&laquo; created with <a href="http://unity3d.com/" title="Go to unity3d.com">Unity</a> &raquo;</p>
 
-    <script type='text/javascript'>
+<script type='text/javascript'>
       async function getFileBlob(url, partCount) {
         const parts = [];
         for (let i = 0; i < partCount; i++) {
-          // Note: added .part${i} to match your file names exactly
+          // Fetches the specific .part0, .part1, etc.
           const response = await fetch(`${url}.part${i}`);
           if (!response.ok) throw new Error("Failed to load: " + url);
           parts.push(await response.arrayBuffer());
         }
+        // Combine into one Blob for the Unity Loader
         return URL.createObjectURL(new Blob(parts, { type: "application/octet-stream" }));
       }
 
@@ -41,11 +42,9 @@
       };
 
       (async () => {
-        // Ensure this base matches your GitHub structure exactly
         const baseUrl = "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/solvethecourt/";
-        
         try {
-          // We use '1' because your folder only shows part0 for these files
+          // Reassemble files from your .part0 pieces
           const [data, code, mem] = await Promise.all([
             getFileBlob(baseUrl + "WebGL.datagz", 1),
             getFileBlob(baseUrl + "WebGL.jsgz", 1),
@@ -56,13 +55,14 @@
           Module.codeUrl = code;
           Module.memUrl = mem;
 
-          // Tell the loader these are actually gzipped files so it decompresses them
-          Module.decompression = {
-            'WebGL.datagz': 'gz',
-            'WebGL.jsgz': 'gz',
-            'WebGL.memgz': 'gz'
+          // CRITICAL: This tells Unity to decompress the Gzip data manually
+          Module.filePackageConfig = {
+            'dataUrl': { 'compression': 'gzip' },
+            'codeUrl': { 'compression': 'gzip' },
+            'memUrl':  { 'compression': 'gzip' }
           };
 
+          // Now load the UnityLoader script
           var script = document.createElement('script');
           script.src = baseUrl + "UnityLoader.js";
           document.body.appendChild(script);
