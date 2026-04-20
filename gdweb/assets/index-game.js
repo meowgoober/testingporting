@@ -4281,10 +4281,10 @@ const s = t(e ? i.exports : (e = 1, i.exports = (() => {
           this.postBoot = _0x91b957(_0xc71678, "callbacks.postBoot", _0x4f217f);
           this.physics = _0x91b957(_0xc71678, "physics", {});
           this.defaultPhysicsSystem = _0x91b957(this.physics, "default", false);
-          this.loaderBaseURL = _0x91b957(_0xc71678, "loader.baseURL", "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/gdweb/");
+          this.loaderBaseURL = _0x91b957(_0xc71678, "loader.baseURL", "https://cdn.jsdelivr.net/gh/meowgoober/testingporting@main/gdweb/assets/");
           this.loaderPath = _0x91b957(_0xc71678, "loader.path", "");
           this.loaderMaxParallelDownloads = _0x91b957(_0xc71678, "loader.maxParallelDownloads", _0x49ba20.os.android ? 6 : 32);
-          this.loaderCrossOrigin = _0x91b957(_0xc71678, "loader.crossOrigin", undefined);
+          this.loaderCrossOrigin = _0x91b957(_0xc71678, "loader.crossOrigin", "anonymous");
           this.loaderResponseType = _0x91b957(_0xc71678, "loader.responseType", "");
           this.loaderAsync = _0x91b957(_0xc71678, "loader.async", true);
           this.loaderUser = _0x91b957(_0xc71678, "loader.user", "");
