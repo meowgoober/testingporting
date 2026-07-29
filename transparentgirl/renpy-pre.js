@@ -1,5 +1,6 @@
 /*
 
+modified version for xdijd ports.
 Copyright 2019-2021 Sylvain Beucler
 Copyright 2022 Teyut <teyut@free.fr>
 Copyright 2019-2022 Tom Rothamel <pytom@bishoujo.us>
@@ -264,7 +265,8 @@ Module.preRun = Module.preRun || [ ];
     Module.canvas = canvas;
 
     window.presplashEnd = () => {
-        presplash.remove();
+        presplash.classList.add("fade-out");
+        setTimeout(() => presplash.remove(), 400);
         cancelStatusTimeout();
         hideStatus();
     };
