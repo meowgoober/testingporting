@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+    <meta name='viewport' content='width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover' />
+    <meta charset='utf-8'>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <style></style>
+    <title>Talking Tom Gold Run</title>
+
+    <script>
+        alert("by xdijd, by request of task4z. https://meowgoober.github.io/meowgoober/ https://discord.gg/wwRXN7k6CG");
+    </script>
+
+    <!-- PokiSDK & GameAnalytics Mock (Offline/Standalone) -->
+    <script>
+    (function() {
+        var defaultPoki = {
+            init: function() { return Promise.resolve(true); },
+            initWithVideoHB: function() { return Promise.resolve(true); },
+            commercialBreak: function(fn) { if (typeof fn === 'function') fn(); return Promise.resolve(true); },
+            rewardedBreak: function(fn) { if (typeof fn === 'function') fn(true); return Promise.resolve(true); },
+            displayAd: function(a, b, c, d) { if (typeof c === 'function') c(); if (typeof d === 'function') d(true); },
+            getLanguage: function() { return (navigator.language || 'en').split('-')[0]; },
+            getDeviceInfo: function() { return { category: 'desktop' }; },
+            isAdBlocked: function() { return false; },
+            getUser: function() { return Promise.resolve(null); },
+            getToken: function() { return Promise.resolve(''); }
+        };
+
+        window.PokiSDK = new Proxy(defaultPoki, {
+            get: function(target, prop) {
+                if (prop in target) return target[prop];
+                return function() {
+                    return Promise.resolve(true);
+                };
+            }
+        });
+
+        var defaultGA = {
+            init: function() {},
+            addDesignEvent: function() {},
+            addBusinessEvent: function() {},
+            addResourceEvent: function() {},
+            addProgressionEvent: function() {},
+            addErrorEvent: function() {}
+        };
+
+        window.GameAnalytics = new Proxy(defaultGA, {
+            get: function(target, prop) {
+                if (prop in target) return target[prop];
+                return function() {};
+            }
+        });
+        window.gameanalytics = window.GameAnalytics;
+    })();
+    </script>
+
+    <!-- import map -->
+    <script type="importmap">
+      {
+        "imports": {}
+      }
+    </script>
+</head>
+<body>
+    <script type='module' src="js/index.mjs"></script>
+</body>
+</html>

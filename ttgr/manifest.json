@@ -1,0 +1,8 @@
+{
+  "name": "Talking Tom Gold Run",
+  "short_name": "TTGR",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#1d292c",
+  "theme_color": "#1d292c"
+}
